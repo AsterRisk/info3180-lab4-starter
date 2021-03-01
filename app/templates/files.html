@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block main %}
+<h1 class="page-header">Uploaded Files</h1>
+
+{% include 'flash_messages.html' %}
+
+{# Add the appropriate method and enctype attributes to the form tag to allow for file uploads #}
+<div id = "images">
+    {% for img in images %}
+        <img src = '{{ url_for("get_image", filename = img) }}' class = "grid-box"/>
+    {% endfor %}
+</div>
+{% endblock %}

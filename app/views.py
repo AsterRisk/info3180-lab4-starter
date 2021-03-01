@@ -6,10 +6,12 @@ This file creates your application.
 """
 import os
 from app import app
-from flask import render_template, request, redirect, url_for, flash, session, abort
+from .config import Config
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory
 from werkzeug.utils import secure_filename
+from .forms import UploadForm
 
-
+config = Config()
 ###
 # Routing for your application.
 ###
@@ -19,28 +21,52 @@ def home():
     """Render website's home page."""
     return render_template('home.html')
 
+def is_picture(filename: str):
+    return filename.endswith('jpg') or filename.endswith('jpeg') or filename.endswith('png') or filename.endswith('webp')
 
 @app.route('/about/')
 def about():
     """Render the website's about page."""
     return render_template('about.html', name="Mary Jane")
 
+def get_uploaded_images():
+    images = []
+    for sd, d, f in os.walk(config.UPLOAD_FOLDER):
+        for img in f:
+            if is_picture(img):
+                images.append(img)
+    return images
 
-@app.route('/upload', methods=['POST', 'GET'])
+@app.route('/uploads/<filename>')
+def get_image(filename):
+    return send_from_directory(os.path.join(os.getcwd(), app.config['UPLOAD_FOLDER']), filename)
+
+@app.route('/files/')
+def files():
+    if not session.get('logged_in'):
+        abort(401)
+    return render_template('files.html', images = get_uploaded_images(), wd = os.getcwd())
+
+@app.route('/upload/', methods=['POST', 'GET'])
 def upload():
+    
     if not session.get('logged_in'):
         abort(401)
 
     # Instantiate your form class
-
+    form = UploadForm()
     # Validate file upload on submit
     if request.method == 'POST':
         # Get file data and save to your uploads folder
-
+        img = form.image.data
+        filename = secure_filename(img.filename)
+        if (is_picture(filename)):
+            savepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            img.save(savepath)
         flash('File Saved', 'success')
         return redirect(url_for('home'))
-
-    return render_template('upload.html')
+    if request.method == 'GET':
+        return render_template('upload.html', form = form)
 
 
 @app.route('/login', methods=['POST', 'GET'])
